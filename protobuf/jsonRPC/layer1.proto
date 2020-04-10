@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+message BestBlockHashResponse {
+
+}
+
+message BlockHashResponse {
+
+}
+
+message NodeInfo {
+    string ProRegTxHash = 1;
+    string ConfirmedHash = 2;
+    string Service = 3;
+    string PubKeyOperator = 4;
+    string VotingAddress = 5;
+    bool IsValid = 6;
+}
+
+message QuorumInfo {
+    int32 Version = 1;
+    int32 LLMQType = 2;
+    string QuorumHash = 3;
+    int32 SignersCount = 4;
+    int32 ValidMembersCount = 5;
+    string QuorumPublicKey = 6;
+}
+
+message MnListDiffResponse {
+    string BaseBlockHash = 1;
+    string BlockHash = 2;
+    string CbTxMerkleTree = 3;
+    string CbTx = 4;
+    repeated NodeInfo DeletedMNs = 5;
+    repeated NodeInfo MnList = 6;
+    repeated QuorumInfo DeletedQuorums = 7;
+    repeated QuorumInfo NewQuorums = 8;
+    string MerkleRootMNList = 9;
+    string MerkleRootQuorums = 10;
+}
