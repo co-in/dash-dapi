@@ -3,21 +3,13 @@ package evo
 import (
 	"context"
 	"crypto/rand"
-	"dapi/interfaces"
 	"errors"
-	"google.golang.org/grpc"
+	"github.com/co-in/dash-dapi/evo/interfaces"
 	"log"
 	"math/big"
 	"strconv"
 	"sync"
 )
-
-type connection struct {
-	*client
-	name  string
-	fraud int
-	conn  *grpc.ClientConn
-}
 
 type client struct {
 	*log.Logger
@@ -31,17 +23,17 @@ type client struct {
 	verboseLevel int
 }
 
-func NewClient(log *log.Logger, verboseLevel int, nodeAddress string, jsonRpcPort int, gRpcPort int) (*client, error) {
+func NewClient(log *log.Logger, verboseLevel int, nodeAddress string, jsonRpcPort uint16, gRpcPort uint16) (*client, error) {
 	c := &client{
 		Logger:         log,
-		ctx:            context.Background(),
-		evoJsonRpcPort: strconv.Itoa(jsonRpcPort),
-		evoGRpcPort:    strconv.Itoa(gRpcPort),
 		verboseLevel:   verboseLevel,
+		ctx:            context.Background(),
+		evoJsonRpcPort: strconv.Itoa(int(jsonRpcPort)),
+		evoGRpcPort:    strconv.Itoa(int(gRpcPort)),
 		connections:    make(map[string]*connection),
 	}
 
-	err := c.AddNode(nodeAddress)
+	err := c.AddNode(nodeAddress, 0)
 
 	if err != nil {
 		return nil, err
@@ -50,7 +42,10 @@ func NewClient(log *log.Logger, verboseLevel int, nodeAddress string, jsonRpcPor
 	return c, nil
 }
 
-func (c *client) AddNode(nodeAddress string) error {
+func (c *client) AddNode(nodeAddress string, fraud int) error {
+	c.Lock()
+	defer c.Unlock()
+
 	if _, ok := c.connections[nodeAddress]; ok {
 		return nil
 	}
@@ -59,47 +54,17 @@ func (c *client) AddNode(nodeAddress string) error {
 	c.connections[nodeAddress] = &connection{
 		client: c,
 		name:   nodeAddress,
-		//conn:   conn,
+		fraud:  fraud,
 	}
-
-	return nil
-}
-
-func (c *connection) LazyConnection() error {
-	if c.conn != nil {
-		return nil
-	}
-
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithBlock())
-
-	//TODO How to get Cert of Node?
-	if false {
-		//serverHostOverride := "evonet.thephez.com"
-		//caFile := "PEM file"
-		//credential, err := credentials.NewClientTLSFromFile(caFile, serverHostOverride)
-		//
-		//if err != nil {
-		//	return err
-		//}
-		//
-		//opts = append(opts, grpc.WithTransportCredentials(credential))
-	} else {
-		opts = append(opts, grpc.WithInsecure())
-	}
-
-	conn, err := grpc.Dial(c.name+":"+c.evoGRpcPort, opts...)
-
-	if err != nil {
-		return err
-	}
-
-	c.conn = conn
 
 	return nil
 }
 
 func (c *client) SelectRandomNode() (interfaces.IConnection, error) {
+	c.Lock()
+	defer c.Unlock()
+
+	//TODO Order By Fraud
 	randIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(c.connectionKeys))))
 
 	if err != nil {
@@ -114,21 +79,8 @@ func (c *client) SelectNode(address string) (interfaces.IConnection, error) {
 	var ok bool
 
 	if conn, ok = c.connections[address]; !ok {
-		return nil, errors.New("node dont exist")
+		return nil, errors.New("the node does not exist")
 	}
 
 	return conn, nil
-}
-
-func (c *connection) CheckAvailability() bool {
-	body := make(map[string][]string)
-	response := new(BestBlockHashResponse)
-
-	err := c.requestJSON(false, false, jsonEndpointGetBestBlockHash, body, response)
-
-	if err != nil || *response == "" {
-		return false
-	}
-
-	return true
 }

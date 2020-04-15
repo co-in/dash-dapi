@@ -1,4 +1,4 @@
 .idea
 *.pb.go
 bin/*
-!bin/db.json*
+!bin/db.*

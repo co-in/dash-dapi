@@ -1,19 +1,20 @@
 package main
 
 import (
-	"dapi/db"
-	"dapi/db/jsonFile"
-	"dapi/evo"
-	"dapi/interfaces"
-	layer1 "dapi/protobuf/jsonRPC"
 	"fmt"
+	"github.com/co-in/dash-dapi/db"
+	"github.com/co-in/dash-dapi/db/jsonFile"
+	"github.com/co-in/dash-dapi/evo"
+	"github.com/co-in/dash-dapi/evo/interfaces"
+	"github.com/co-in/dash-dapi/evo/structures"
 	"log"
+	"math"
 	"os"
 	"regexp"
 	"sync"
 )
 
-func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvider interfaces.IDatabase, evoNodes []string) {
+func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvider db.IDatabase, evoNodes []string) {
 	node, err := dAPI.SelectRandomNode()
 
 	if err != nil {
@@ -29,7 +30,7 @@ func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvide
 	dbLastBlockHash := dbProvider.GetCurrentBlockHash()
 
 	//Sync MasterNode list
-	if lastBlockHash.String() != dbLastBlockHash {
+	if string(*lastBlockHash) != dbLastBlockHash {
 		//First Run
 		if dbLastBlockHash == "" {
 			baseBlockHash, err := node.GetBlockHash(0)
@@ -38,10 +39,10 @@ func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvide
 				logger.Fatalln(err)
 			}
 
-			dbProvider.SetCurrentBlockHash(baseBlockHash.String())
+			dbProvider.SetCurrentBlockHash(string(*baseBlockHash))
 		}
 
-		mnList, err := node.GetMnListDiff(dbProvider.GetCurrentBlockHash(), lastBlockHash.String())
+		mnList, err := node.GetMnListDiff(dbProvider.GetCurrentBlockHash(), string(*lastBlockHash))
 
 		if err != nil {
 			logger.Fatalln(err)
@@ -50,57 +51,48 @@ func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvide
 		//Discovery new EVO nodes
 		wg := new(sync.WaitGroup)
 		wg.Add(len(mnList.MnList))
-		nodes := make([]db.ExtNodeInfo, 0)
 		re := regexp.MustCompile(`(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}`)
 		m := new(sync.Mutex)
 
 		for _, v := range mnList.MnList {
 			//Async connection to EvoNodes
-			go func(v *layer1.NodeInfo) {
-				n := db.ExtNodeInfo{
-					NodeInfo: v,
-				}
+			go func(v structures.NodeInfo) {
+				var tempNode interfaces.IConnection
+
+				defer func() {
+					if tempNode != nil {
+						tempNode.Remove()
+					}
+
+					wg.Done()
+				}()
 
 				ip := re.Find([]byte(v.Service))
 				ipStr := string(ip)
-				node, err = dAPI.SelectNode(ipStr)
+				err = dAPI.AddNode(ipStr, 0)
 
 				if err != nil {
-					wg.Done()
-
 					return
 				}
 
-				if node.CheckAvailability() {
-					n.IsEvoNode = true
+				tempNode, err = dAPI.SelectNode(ipStr)
+
+				if err != nil {
+					return
+				}
+
+				if tempNode.CheckAvailability() {
 					m.Lock()
 					evoNodes = append(evoNodes, ipStr)
 					m.Unlock()
 				}
-
-				m.Lock()
-				nodes = append(nodes, n)
-				m.Unlock()
-
-				wg.Done()
 			}(v)
 		}
 
 		wg.Wait()
 
-		keys := make(map[string]bool)
-		var list []string
-
-		for _, entry := range evoNodes {
-			if _, value := keys[entry]; !value {
-				keys[entry] = true
-				list = append(list, entry)
-			}
-		}
-
-		//dbProvider.SetNodes(nodes)
 		dbProvider.SetEvoNodes(evoNodes)
-		dbProvider.SetCurrentBlockHash(lastBlockHash.String())
+		dbProvider.SetCurrentBlockHash(string(*lastBlockHash))
 
 		err = dbProvider.Save()
 
@@ -112,7 +104,7 @@ func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvide
 
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	dbProvider := jsonFile.NewDB("db.json")
+	dbProvider := jsonFile.NewDB("_db.json")
 
 	err := dbProvider.Load()
 
@@ -122,13 +114,13 @@ func main() {
 
 	jsonRpcPort := dbProvider.GetEvoJsonRpcPort()
 
-	if jsonRpcPort < 1 || jsonRpcPort > 65535 {
+	if jsonRpcPort < 1 || jsonRpcPort > math.MaxUint16 {
 		logger.Fatalln("Invalid or missing evo_json_rpc_port in db")
 	}
 
 	gRpcPort := dbProvider.GetEvoGRpcPort()
 
-	if gRpcPort < 1 || gRpcPort > 65535 {
+	if gRpcPort < 1 || gRpcPort > math.MaxUint16 {
 		logger.Fatalln("Invalid or missing evo_grpc_port in db")
 	}
 
@@ -150,7 +142,7 @@ func main() {
 
 	//Apply evoNodes
 	for _, v := range dbProvider.GetEvoNodes() {
-		err = dAPI.AddNode(v)
+		err = dAPI.AddNode(v, 0)
 	}
 
 	node, err := dAPI.SelectRandomNode()

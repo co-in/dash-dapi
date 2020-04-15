@@ -1,4 +1,4 @@
-module dapi
+module github.com/co-in/dash-dapi
 
 go 1.14
 

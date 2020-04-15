@@ -2,6 +2,5 @@
 GO_LOCATION=$(which go)
 GOROOT=$(echo ${GO_LOCATION%/bin/go})
 
-protoc --go_out=plugins=grpc:. protobuf/*.proto
-protoc --go_out=plugins=grpc:. protobuf/jsonRPC/*.proto
+protoc --go_out=plugins=grpc:. evo/protobuf/*.proto
 go build -o ./bin/dapi .

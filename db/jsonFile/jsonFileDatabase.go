@@ -1,14 +1,13 @@
 package jsonFile
 
 import (
-	"dapi/db"
-	"dapi/interfaces"
 	"encoding/json"
+	"github.com/co-in/dash-dapi/db"
 	"os"
 )
 
 type config struct {
-	interfaces.IBaseDatabase
+	db.IBaseDatabase
 	fileName string
 }
 

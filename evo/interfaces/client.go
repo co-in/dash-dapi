@@ -1,12 +1,12 @@
 package interfaces
 
 import (
-	proto "dapi/protobuf"
-	jsonRPC "dapi/protobuf/jsonRPC"
+	proto "github.com/co-in/dash-dapi/evo/protobuf"
+	"github.com/co-in/dash-dapi/evo/structures"
 )
 
 type IClient interface {
-	AddNode(hostname string) error
+	AddNode(hostname string, fraud int) error
 	SelectRandomNode() (IConnection, error)
 	SelectNode(hostname string) (IConnection, error)
 }
@@ -16,6 +16,7 @@ type IConnection interface {
 	ILayer2
 	GetNodeName() string
 	CheckAvailability() bool
+	Remove()
 }
 
 type ILayer1 interface {
@@ -24,9 +25,9 @@ type ILayer1 interface {
 }
 
 type ILayer1JSON interface {
-	GetBestBlockHash() (*jsonRPC.BestBlockHashResponse, error)
-	GetBlockHash(height int) (*jsonRPC.BlockHashResponse, error)
-	GetMnListDiff(baseBlockHash string, blockHash string) (*jsonRPC.MnListDiffResponse, error)
+	GetBestBlockHash() (*structures.BestBlockHashResponse, error)
+	GetBlockHash(height int) (*structures.BlockHashResponse, error)
+	GetMnListDiff(baseBlockHash string, blockHash string) (*structures.MnListDiffResponse, error)
 	//GetAddressSummary(addresses []string) (*evo.AddressSummaryResponse, error)
 	//GetUTXO(addresses []string, limitRange *evo.LimitRange) (*evo.UTXOResponse, error)
 }
