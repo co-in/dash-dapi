@@ -56,7 +56,7 @@ func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvide
 
 		for _, v := range mnList.MnList {
 			//Async connection to EvoNodes
-			go func(v structures.NodeInfo) {
+			go func(v structures.NodeInfoResponse) {
 				var tempNode interfaces.IConnection
 
 				defer func() {
@@ -136,6 +136,7 @@ func main() {
 		logger.Fatalln(err)
 	}
 
+	//At first Run Discovery other nodes
 	if len(evoNodes) == 1 {
 		discoveryNewEvoNodes(dAPI, logger, dbProvider, evoNodes)
 	}

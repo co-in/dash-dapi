@@ -1,5 +1,10 @@
 package structures
 
+import (
+	"encoding/json"
+	"errors"
+)
+
 type AddressSummaryResponse struct {
 	AddrStr                 []string
 	Balance                 float64
@@ -21,7 +26,36 @@ type BlockHashResponse string
 
 type BestBlockHashResponse string
 
-type UTXOItem struct {
+type UTXORequest struct {
+	From       *int     `json:"from,omitempty"`
+	To         *int     `json:"to,omitempty"`
+	FromHeight *int     `json:"fromHeight,omitempty"`
+	ToHeight   *int     `json:"toHeight,omitempty"`
+	Addresses  []string `json:"address"`
+}
+
+func (s UTXORequest) MarshalJSON() ([]byte, error) {
+	if len(s.Addresses) == 0 {
+		return nil, errors.New("empty field Addresses")
+	}
+
+	return json.Marshal(s)
+}
+
+type BlockRequest struct {
+	Hash   *string `json:"hash,omitempty"`
+	Height *int    `json:"height,omitempty"`
+}
+
+func (s BlockRequest) MarshalJSON() ([]byte, error) {
+	if s.Hash == nil && s.Height == nil {
+		return nil, errors.New("required one of fields (Hash, Height)")
+	}
+
+	return json.Marshal(s)
+}
+
+type UTXOItemResponse struct {
 	Address     string
 	Txid        string
 	OutputIndex int
@@ -30,33 +64,16 @@ type UTXOItem struct {
 	Height      int
 }
 
-type UTXORequest struct {
-	*LimitRange
-	Addresses []string `json:"address"`
-}
-
 type UTXOResponse struct {
 	TotalItems int
 	From       int
 	To         int
 	FromHeight int
 	ToHeight   int
-	Items      []UTXOItem
+	Items      []UTXOItemResponse
 }
 
-type LimitRange struct {
-	From       int
-	To         int
-	FromHeight int
-	ToHeight   int
-}
-
-type BlockRequest struct {
-	Hash   string
-	Height int
-}
-
-type NodeInfo struct {
+type NodeInfoResponse struct {
 	ProRegTxHash   string
 	ConfirmedHash  string
 	Service        string
@@ -65,7 +82,7 @@ type NodeInfo struct {
 	IsValid        bool
 }
 
-type QuorumInfo struct {
+type QuorumInfoResponse struct {
 	Version           int
 	LLMQType          int
 	QuorumHash        string
@@ -79,10 +96,10 @@ type MnListDiffResponse struct {
 	BlockHash         string
 	CbTxMerkleTree    string
 	CbTx              string
-	DeletedMNs        []NodeInfo
-	MnList            []NodeInfo
-	DeletedQuorums    []QuorumInfo
-	NewQuorums        []QuorumInfo
+	DeletedMNs        []NodeInfoResponse
+	MnList            []NodeInfoResponse
+	DeletedQuorums    []QuorumInfoResponse
+	NewQuorums        []QuorumInfoResponse
 	MerkleRootMNList  string
 	MerkleRootQuorums string
 }

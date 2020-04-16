@@ -3,6 +3,7 @@ package evo
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	proto "github.com/co-in/dash-dapi/evo/protobuf"
 	"github.com/co-in/dash-dapi/evo/structures"
 
@@ -92,9 +93,9 @@ func (c *connection) GetMnListDiff(baseBlockHash string, blockHash string) (*str
 	return response, nil
 }
 
-func (c *connection) GetUTXO(body structures.UTXORequest) (*structures.UTXOResponse, error) {
+func (c *connection) GetUTXO(request structures.UTXORequest) (*structures.UTXOResponse, error) {
 	response := new(structures.UTXOResponse)
-	err := c.requestJSON(true, true, jsonEndpointGetUTXO, body, &response)
+	err := c.requestJSON(true, true, jsonEndpointGetUTXO, request, &response)
 
 	if err != nil {
 		return nil, err
@@ -118,6 +119,10 @@ func (c *connection) GetAddressSummary(addresses []string) (*structures.AddressS
 }
 
 func (c *connection) GetBlock(block structures.BlockRequest) (*proto.GetBlockResponse, error) {
+	if block.Hash == nil && block.Height == nil {
+		return nil, errors.New("required one of fields (Hash, Height)")
+	}
+
 	err := c.LazyConnection()
 
 	if err != nil {
@@ -127,13 +132,13 @@ func (c *connection) GetBlock(block structures.BlockRequest) (*proto.GetBlockRes
 	layer1 := proto.NewCoreClient(c.conn)
 	request := new(proto.GetBlockRequest)
 
-	if block.Hash != "" {
+	if block.Hash == nil {
 		r := new(proto.GetBlockRequest_Hash)
-		r.Hash = block.Hash
+		r.Hash = *block.Hash
 		request.Block = r
 	} else {
 		r := new(proto.GetBlockRequest_Height)
-		r.Height = uint32(block.Height)
+		r.Height = uint32(*block.Height)
 		request.Block = r
 	}
 

@@ -19,7 +19,15 @@ func (c *connection) CheckAvailability() bool {
 
 	err := c.requestJSON(false, false, jsonEndpointGetBestBlockHash, body, response)
 
+	//Check JSON RPC
 	if err != nil || *response == "" {
+		return false
+	}
+
+	status, err := c.GetStatus()
+
+	//Check gRPC
+	if err != nil || status == nil || status.Connections < 2 {
 		return false
 	}
 

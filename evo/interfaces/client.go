@@ -28,12 +28,13 @@ type ILayer1JSON interface {
 	GetBestBlockHash() (*structures.BestBlockHashResponse, error)
 	GetBlockHash(height int) (*structures.BlockHashResponse, error)
 	GetMnListDiff(baseBlockHash string, blockHash string) (*structures.MnListDiffResponse, error)
-	//GetAddressSummary(addresses []string) (*evo.AddressSummaryResponse, error)
-	//GetUTXO(addresses []string, limitRange *evo.LimitRange) (*evo.UTXOResponse, error)
+	GetAddressSummary(addresses []string) (*structures.AddressSummaryResponse, error)
+	GetUTXO(request structures.UTXORequest) (*structures.UTXOResponse, error)
 }
 
 type ILayer1GRPC interface {
 	GetStatus() (*proto.GetStatusResponse, error)
+	GetBlock(block structures.BlockRequest) (*proto.GetBlockResponse, error)
 	GetTransaction(id string) (*proto.GetTransactionResponse, error)
 	SendTransaction(data []byte, allowHighFees bool, bypassLimits bool) (*proto.SendTransactionResponse, error)
 }
