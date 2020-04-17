@@ -110,7 +110,7 @@ func getStatus(logger *log.Logger, node interfaces.IConnection) {
 		logger.Fatalln(err)
 	}
 
-	fmt.Printf("Status of node:\t\t%s\nNetwork:\t\t%s\nCoreVersion:\t\t%d\nBlocks:\t\t\t%d\nRelayFee:\t\t%f\nConnections:\t\t%d\nNetworkDifficulty:\t%f\n",
+	fmt.Printf("Status of node:\t\t%s\nNetwork:\t\t%s\nCoreVersion:\t\t%d\nBlocks:\t\t\t%d\nRelayFee:\t\t%f\nConnections:\t\t%d\nNetworkDifficulty:\t%f\n\n",
 		node.GetNodeName(),
 		result.Network,
 		result.CoreVersion,
@@ -268,10 +268,13 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	//go getTransactionStream(logger, node)
-	//getStatus(logger, node)
-	//getIdentity(logger, node)
-	getDocuments(logger, node)
+	getStatus(logger, node)
+	getIdentity(logger, node)
 	getDataContract(logger, node)
+	getDocuments(logger, node)
 
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go getTransactionStream(logger, node)
+	wg.Wait() //Wait forever
 }
