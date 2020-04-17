@@ -41,4 +41,8 @@ type ILayer1GRPC interface {
 }
 
 type ILayer2 interface {
+	ApplyStateTransition(stateTransition []byte) (*proto.ApplyStateTransitionResponse, error)
+	GetIdentity(id string) (*proto.GetIdentityResponse, error)
+	GetDataContract(id string) (*proto.GetDataContractResponse, error)
+	GetDocuments(dataContractId string, documentType string, filter structures.GetDocumentsRequest) (*proto.GetDocumentsResponse, error)
 }

@@ -167,6 +167,57 @@ func getTransactionStream(logger *log.Logger, node interfaces.IConnection) {
 	}
 }
 
+func getIdentity(logger *log.Logger, node interfaces.IConnection) {
+	r, err := node.GetIdentity("At44pvrZXLwjbJp415E2kjav49goGosRF3SB1WW1QJoG")
+	//r, err := node.GetIdentity("A6AJAfRJyKuNoNvt33ygYfYh6OIYA8tF1s2BQcRA9RNg")
+
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
+	i := r.GetIdentity()
+
+	//TODO Parse identity
+	fmt.Printf("Identity: %s\n", i)
+}
+
+func getDataContract(logger *log.Logger, node interfaces.IConnection) {
+	r, err := node.GetDataContract("77w8Xqn25HwJhjodrHW133aXhjuTsTv9ozQaYpSHACE3")
+
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
+	c := r.GetDataContract()
+
+	//TODO Parse contract
+	fmt.Printf("DataContract: %s\n", c)
+}
+
+func getDocuments(logger *log.Logger, node interfaces.IConnection) {
+	limit := 1
+
+	r, err := node.GetDocuments(
+		"77w8Xqn25HwJhjodrHW133aXhjuTsTv9ozQaYpSHACE3",
+		"domain", structures.GetDocumentsRequest{
+			Limit: &limit,
+		},
+	)
+
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
+	documents := r.GetDocuments()
+
+	fmt.Println("Documents:")
+
+	for i, d := range documents {
+		//TODO Parse documents
+		fmt.Printf("%d\t:%s\n", i, d)
+	}
+}
+
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	dbProvider := jsonFile.NewDB("db.json")
@@ -218,5 +269,9 @@ func main() {
 	}
 
 	//go getTransactionStream(logger, node)
-	getStatus(logger, node)
+	//getStatus(logger, node)
+	//getIdentity(logger, node)
+	getDocuments(logger, node)
+	getDataContract(logger, node)
+
 }
