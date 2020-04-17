@@ -94,6 +94,10 @@ func (c *connection) GetMnListDiff(baseBlockHash string, blockHash string) (*str
 }
 
 func (c *connection) GetUTXO(request structures.UTXORequest) (*structures.UTXOResponse, error) {
+	if len(request.Addresses) == 0 {
+		return nil, errors.New("empty field Addresses")
+	}
+
 	response := new(structures.UTXOResponse)
 	err := c.requestJSON(true, true, jsonEndpointGetUTXO, request, &response)
 
@@ -212,12 +216,64 @@ func (c *connection) SendTransaction(data []byte, allowHighFees bool, bypassLimi
 	return response, nil
 }
 
+//func (c *connection) SubscribeToTransactionsWithProofs(params structures.SubscribeToTransactionsWithProofsRequest) (*proto.TransactionsWithProofsResponse, error) {
+func (c *connection) SubscribeToTransactionsWithProofs(params structures.SubscribeToTransactionsWithProofsRequest) (proto.TransactionsFilterStream_SubscribeToTransactionsWithProofsClient, error) {
+	if params.FromBlockHash != nil && params.FromBlockHeight != nil {
+		return nil, errors.New("only one of fields (FromBlockHash, FromBlockHeight)")
+	}
+
+	err := c.LazyConnection()
+
+	if err != nil {
+		return nil, err
+	}
+
+	layer1 := proto.NewTransactionsFilterStreamClient(c.conn)
+	request := &proto.TransactionsWithProofsRequest{
+		BloomFilter: &proto.BloomFilter{
+			VData:      params.BloomFilter.Data,
+			NHashFuncs: params.BloomFilter.HashFunc,
+			NTweak:     params.BloomFilter.Tweak,
+			NFlags:     params.BloomFilter.Flags,
+		},
+	}
+
+	if params.Count != nil {
+		request.Count = uint32(*params.Count)
+	}
+
+	if params.SendTransactionHashes != nil {
+		request.SendTransactionHashes = *params.SendTransactionHashes
+	}
+
+	if params.FromBlockHash != nil {
+		request.FromBlock = &proto.TransactionsWithProofsRequest_FromBlockHash{
+			FromBlockHash: *params.FromBlockHash,
+		}
+	}
+
+	if params.FromBlockHeight != nil {
+		request.FromBlock = &proto.TransactionsWithProofsRequest_FromBlockHeight{
+			FromBlockHeight: uint32(*params.FromBlockHeight),
+		}
+	}
+
+	response, err := layer1.SubscribeToTransactionsWithProofs(c.ctx, request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func (c *connection) requestJSON(withVerbose bool, withFraud bool, method string, params interface{}, response interface{}) error {
 	c.Lock()
 	c.id++
 	id := c.id
 	c.Unlock()
 
+	//TODO #ManInTheMiddle HTTPS?
 	nodeAddressURL := "http://" + c.name + ":" + c.evoJsonRpcPort
 
 	request, err := (jsonRPCRequest{

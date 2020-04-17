@@ -1,10 +1,5 @@
 package structures
 
-import (
-	"encoding/json"
-	"errors"
-)
-
 type AddressSummaryResponse struct {
 	AddrStr                 []string
 	Balance                 float64
@@ -25,35 +20,6 @@ type AddressSummaryResponse struct {
 type BlockHashResponse string
 
 type BestBlockHashResponse string
-
-type UTXORequest struct {
-	From       *int     `json:"from,omitempty"`
-	To         *int     `json:"to,omitempty"`
-	FromHeight *int     `json:"fromHeight,omitempty"`
-	ToHeight   *int     `json:"toHeight,omitempty"`
-	Addresses  []string `json:"address"`
-}
-
-func (s UTXORequest) MarshalJSON() ([]byte, error) {
-	if len(s.Addresses) == 0 {
-		return nil, errors.New("empty field Addresses")
-	}
-
-	return json.Marshal(s)
-}
-
-type BlockRequest struct {
-	Hash   *string `json:"hash,omitempty"`
-	Height *int    `json:"height,omitempty"`
-}
-
-func (s BlockRequest) MarshalJSON() ([]byte, error) {
-	if s.Hash == nil && s.Height == nil {
-		return nil, errors.New("required one of fields (Hash, Height)")
-	}
-
-	return json.Marshal(s)
-}
 
 type UTXOItemResponse struct {
 	Address     string
@@ -102,4 +68,32 @@ type MnListDiffResponse struct {
 	NewQuorums        []QuorumInfoResponse
 	MerkleRootMNList  string
 	MerkleRootQuorums string
+}
+
+type UTXORequest struct {
+	From       *int     `json:"from,omitempty"`
+	To         *int     `json:"to,omitempty"`
+	FromHeight *int     `json:"fromHeight,omitempty"`
+	ToHeight   *int     `json:"toHeight,omitempty"`
+	Addresses  []string `json:"address"`
+}
+
+type BlockRequest struct {
+	Hash   *string `json:"hash,omitempty"`
+	Height *int    `json:"height,omitempty"`
+}
+
+type BloomFilterRequest struct {
+	Data     []byte `json:"v_data"`
+	HashFunc uint32 `json:"n_hash_funcs"`
+	Tweak    uint32 `json:"n_tweak"`
+	Flags    uint32 `json:"n_flags"`
+}
+
+type SubscribeToTransactionsWithProofsRequest struct {
+	BloomFilter           BloomFilterRequest `json:"bloom_filter"`
+	Count                 *int               `json:"count,omitempty"`
+	FromBlockHash         *[]byte            `json:"from_block_hash,omitempty"`
+	FromBlockHeight       *int               `json:"from_block_height,omitempty"`
+	SendTransactionHashes *bool              `json:"send_transaction_hashes,omitempty"`
 }

@@ -1,7 +1,7 @@
 {
-	"evo_json_rpc_port": 3000,
-	"evo_grpc_port": 3010,
-	"evo_nodes": [
-		"evonet.thephez.com"
-	]
+  "evo_json_rpc_port": 3000,
+  "evo_grpc_port": 3010,
+  "evo_nodes": [
+    "evonet.thephez.com"
+  ]
 }

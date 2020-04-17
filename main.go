@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"sync"
+	"time"
 )
 
 func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvider db.IDatabase, evoNodes []string) {
@@ -102,9 +103,73 @@ func discoveryNewEvoNodes(dAPI interfaces.IClient, logger *log.Logger, dbProvide
 	}
 }
 
+func getStatus(logger *log.Logger, node interfaces.IConnection) {
+	result, err := node.GetStatus()
+
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
+	fmt.Printf("Status of node:\t\t%s\nNetwork:\t\t%s\nCoreVersion:\t\t%d\nBlocks:\t\t\t%d\nRelayFee:\t\t%f\nConnections:\t\t%d\nNetworkDifficulty:\t%f\n",
+		node.GetNodeName(),
+		result.Network,
+		result.CoreVersion,
+		result.Blocks,
+		result.RelayFee,
+		result.Connections,
+		result.Difficulty,
+	)
+}
+
+func getTransactionStream(logger *log.Logger, node interfaces.IConnection) {
+	g, err := node.SubscribeToTransactionsWithProofs(structures.SubscribeToTransactionsWithProofsRequest{
+		BloomFilter: structures.BloomFilterRequest{
+			HashFunc: 11,
+			Data:     []byte{0xB5, 0x0F},
+		},
+	})
+
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
+	for {
+		r, err := g.Recv()
+
+		if err != nil {
+			logger.Fatalln(err)
+		}
+
+		transactions := r.GetRawTransactions()
+
+		if transactions != nil {
+			fmt.Println("Transactions:")
+
+			for index, transaction := range transactions.GetTransactions() {
+				fmt.Printf("%d:\t%0X\n", index, transaction)
+			}
+		}
+
+		merkleBlock := r.GetRawMerkleBlock()
+
+		if merkleBlock != nil {
+			fmt.Printf("MerkleBlock: %0X\n", merkleBlock)
+		}
+
+		instantSendLock := r.GetInstantSendLockMessages()
+
+		if instantSendLock != nil {
+			fmt.Println("InstantSendLock:")
+			fmt.Println(instantSendLock)
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	dbProvider := jsonFile.NewDB("_db.json")
+	dbProvider := jsonFile.NewDB("db.json")
 
 	err := dbProvider.Load()
 
@@ -136,15 +201,15 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	//At first Run Discovery other nodes
-	if len(evoNodes) == 1 {
-		discoveryNewEvoNodes(dAPI, logger, dbProvider, evoNodes)
-	}
-
 	//Apply evoNodes
 	for _, v := range dbProvider.GetEvoNodes() {
 		err = dAPI.AddNode(v, 0)
 	}
+
+	//At first Run Discovery other nodes
+	//if len(evoNodes) == 1 {
+	//	discoveryNewEvoNodes(dAPI, logger, dbProvider, evoNodes)
+	//}
 
 	node, err := dAPI.SelectRandomNode()
 
@@ -152,19 +217,6 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	result, err := node.GetStatus()
-
-	if err != nil {
-		logger.Fatalln(err)
-	}
-
-	fmt.Printf("Status of node:\t\t%s\nNetwork:\t\t%s\nCoreVersion:\t\t%d\nBlocks:\t\t\t%d\nRelayFee:\t\t%f\nConnections:\t\t%d\nNetworkDifficulty:\t%f\n",
-		node.GetNodeName(),
-		result.Network,
-		result.CoreVersion,
-		result.Blocks,
-		result.RelayFee,
-		result.Connections,
-		result.Difficulty,
-	)
+	//go getTransactionStream(logger, node)
+	getStatus(logger, node)
 }

@@ -37,6 +37,7 @@ type ILayer1GRPC interface {
 	GetBlock(block structures.BlockRequest) (*proto.GetBlockResponse, error)
 	GetTransaction(id string) (*proto.GetTransactionResponse, error)
 	SendTransaction(data []byte, allowHighFees bool, bypassLimits bool) (*proto.SendTransactionResponse, error)
+	SubscribeToTransactionsWithProofs(params structures.SubscribeToTransactionsWithProofsRequest) (proto.TransactionsFilterStream_SubscribeToTransactionsWithProofsClient, error)
 }
 
 type ILayer2 interface {

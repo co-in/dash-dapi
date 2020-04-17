@@ -1,6 +1,7 @@
 package evo
 
 import (
+	proto "github.com/co-in/dash-dapi/evo/protobuf"
 	"github.com/co-in/dash-dapi/evo/structures"
 	"google.golang.org/grpc"
 	"sort"
@@ -8,9 +9,16 @@ import (
 
 type connection struct {
 	*client
-	name  string
+	conn *grpc.ClientConn
+	name string
+	//TODO Implement
 	fraud int
-	conn  *grpc.ClientConn
+	//TODO Implement
+	ping int
+	//TODO implement LazyClient
+	coreClient                    *proto.CoreClient
+	platformClient                *proto.PlatformClient
+	transactionFilterStreamClient *proto.TransactionsFilterStreamClient
 }
 
 func (c *connection) CheckAvailability() bool {
@@ -42,7 +50,7 @@ func (c *connection) LazyConnection() error {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithBlock())
 
-	//TODO How to get Cert of Node?
+	//TODO #ManInTheMiddle How to get Cert of Node?
 	if false {
 		//serverHostOverride := "evonet.thephez.com"
 		//caFile := "PEM file"
@@ -80,6 +88,7 @@ func (c *connection) Remove() {
 		_ = c.client.connections[c.name].conn.Close()
 	}
 
+	//TODO Investigate Benchmark, full rebuild connectionKeys
 	i := sort.SearchStrings(c.client.connectionKeys, c.name)
 	connectionNewLen := len(c.client.connectionKeys) - 1
 
